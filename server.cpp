@@ -13,6 +13,49 @@
 #define BUFF_SIZE 1024
 #define WELCOME_MESSAGE "Welcome to the server!\r\n"
 
+void handleHttp(int client, std::string server_request, FileMap files)
+{
+	std::string file = "";
+    std::string type = "";
+	
+	for(int i = 5; i < server_request.size(); i++)
+    {
+		if(server_request[i] == ' ')
+        {
+			break;
+        }
+		else
+        {
+			file += server_request[i];
+        }
+	}
+	if(file.size() == 0)
+    {
+		file = "index.html";
+    }
+
+    int typeIndex = file.find(".");
+    
+    for(int i = typeIndex + 1; i < file.size(); i++)
+    {
+        type += file[i];
+    }
+    
+    send(client, "HTTP/1.1 200 OK\n", 16, 0);
+    
+    std::string protocolString = "Content-Type: text/" + type + "\n";
+    send(client, protocolString.c_str(), protocolString.size(), 0);
+
+    send(client, "Connection: close\n", 18, 0);
+    send(client, "\n", 1, 0);
+
+    protocolString = "www/" + file;
+    protocolString = files.getFile(protocolString);
+
+    send(client, protocolString.c_str(), protocolString.size(), 0);
+}
+
+
 void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
 {
     fd_set client_set;
@@ -77,30 +120,15 @@ void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
             }
             else
             {
-                send(current_fd, "HTTP/1.1 200 OK\n", 16, 0);
-                send(current_fd, "Content-Type: text/html\n", 24, 0);
-                send(current_fd, "Connection: close\n", 18, 0);
-                send(current_fd, "\n", 1, 0);
-
-                welcome_message = files.getFile("www/index.html");
-
-                if(send(current_fd, welcome_message.c_str(), welcome_message.size(), 0) == -1)
+                // Add new socket to array of sockets
+                for(i = 0; i < MAX_CLIENTS; i++)
                 {
-                    std::cerr << "Failed to send message: " << strerror(errno) << std::endl;
-                    std::cout << "Trying to continue..." << std::endl;
-                }
-                else
-                {
-                    // Add new socket to array of sockets
-                    for(i = 0; i < MAX_CLIENTS; i++)
+                    if(client_fd[i] == 0)
                     {
-                        if(client_fd[i] == 0)
-                        {
-                            client_fd[i] = current_fd;
-                            //std::cout << "New client has joined." << std::endl;
+                        client_fd[i] = current_fd;
+                        //std::cout << "New client has joined." << std::endl;
 
-                            break;
-                        }
+                        break;
                     }
                 }
             }
@@ -137,7 +165,10 @@ void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
                 else
                 {
                     // Log the message
-                    std::cout << buffer << std::endl;
+                    //std::cout << buffer << std::endl;
+
+                    handleHttp(current_fd, buffer, files);
+
                     client_fd[i] = 0;
                     close(current_fd);
                 }
