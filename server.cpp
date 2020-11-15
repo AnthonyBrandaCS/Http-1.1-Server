@@ -1,15 +1,19 @@
 #include <iostream>
+
 #include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 
+#include "FileMap.h"
+
+#define FILE_DIRECTORY "www/"
 #define PORT 8000
 #define MAX_CLIENTS 30
 #define BUFF_SIZE 1024
 #define WELCOME_MESSAGE "Welcome to the server!\r\n"
 
-void serverBody(int server, sockaddr* addr, socklen_t addr_len)
+void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
 {
     fd_set client_set;
     int client_fd[MAX_CLIENTS] = {0};
@@ -73,6 +77,13 @@ void serverBody(int server, sockaddr* addr, socklen_t addr_len)
             }
             else
             {
+                send(current_fd, "HTTP/1.1 200 OK\n", 16, 0);
+                send(current_fd, "Content-Type: text/html\n", 24, 0);
+                send(current_fd, "Connection: close\n", 18, 0);
+                send(current_fd, "\n", 1, 0);
+
+                welcome_message = files.getFile("www/index.html");
+
                 if(send(current_fd, welcome_message.c_str(), welcome_message.size(), 0) == -1)
                 {
                     std::cerr << "Failed to send message: " << strerror(errno) << std::endl;
@@ -167,7 +178,9 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-    serverBody(server, (sockaddr*)&addr, addr_len);
+    FileMap fileMap(FILE_DIRECTORY);
+
+    serverBody(server, (sockaddr*)&addr, addr_len, fileMap);
 
     close(server);
 
