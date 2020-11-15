@@ -40,8 +40,20 @@ void handleHttp(int client, std::string server_request, FileMap files)
     {
         type += file[i];
     }
-    
-    send(client, "HTTP/1.1 200 OK\n", 16, 0);
+
+    std::string html = "";
+    html = files.getFile("www/" + file);
+
+    if(html.size() == 0)
+    {
+        html = files.getFile("www/invalid.html");
+        type = "html";
+        send(client, "HTTP/1.1 404 NOT FOUND\n", 23, 0);
+    }
+    else
+    {
+        send(client, "HTTP/1.1 200 OK\n", 16, 0);
+    }
     
     std::string protocolString = "Content-Type: text/" + type + "\n";
     send(client, protocolString.c_str(), protocolString.size(), 0);
@@ -49,10 +61,7 @@ void handleHttp(int client, std::string server_request, FileMap files)
     send(client, "Connection: close\n", 18, 0);
     send(client, "\n", 1, 0);
 
-    protocolString = "www/" + file;
-    protocolString = files.getFile(protocolString);
-
-    send(client, protocolString.c_str(), protocolString.size(), 0);
+    send(client, html.c_str(), html.size(), 0);
 }
 
 
