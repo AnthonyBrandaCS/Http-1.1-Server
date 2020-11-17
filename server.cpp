@@ -7,6 +7,8 @@
 
 #include "FileMap.h"
 
+#define DEBUGGER false
+
 #define FILE_DIRECTORY "www/"
 #define PORT 8000
 #define MAX_CLIENTS 30
@@ -82,6 +84,14 @@ void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
 
     while(true)
     {
+        // TODO: This is for debugging
+        // I should allow for changine the files as they are updated.
+        if(DEBUGGER)
+        {
+            FileMap debug_files(FILE_DIRECTORY);
+            files = debug_files;
+        }
+
         // Clear the socket set
         FD_ZERO(&client_set);
 
@@ -174,7 +184,7 @@ void serverBody(int server, sockaddr* addr, socklen_t addr_len, FileMap files)
                 else
                 {
                     // Log the message
-                    //std::cout << buffer << std::endl;
+                    std::cout << buffer << std::endl;
 
                     handleHttp(current_fd, buffer, files);
 
